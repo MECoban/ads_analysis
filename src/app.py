@@ -125,7 +125,90 @@ def display_ad_set_analysis_modified(df_input, analyze_func, id_column_name, dat
     st.markdown(f"#### {global_label} Performansı")
     g_results, g_spent = analyze_func(df_processed_for_analyzer, target_countries=['TR', 'AZ'], filter_type='exclude', top_n=top_n)
     _display_tables(g_results, g_spent, global_label)
-# --- End Helper Functions ---
+
+def display_regional_sales_kpis(period_label, period_ad_df_processed, period_sales_df, country_code_map):
+    st.header(f"Bölgesel Satış KPI'ları ({period_label})")
+
+    regions_to_display = {
+        'Turkey': ['TR'],
+        'Azerbaijan': ['AZ'],
+        'Global (TR ve AZ Hariç)': 'exclude_tr_az' # Special case
+    }
+
+    kpi_data_list = []
+
+    for display_name, country_codes_or_flag in regions_to_display.items():
+        # Initialize metrics
+        total_spent, total_reach, total_link_clicks, total_impressions = 0, 0, 0, 0
+        randevu_sayisi, satis_sayisi = 0, 0
+
+        # --- Aggregate Ad Data ---
+        if country_codes_or_flag == 'exclude_tr_az':
+            region_ad_data = period_ad_df_processed[~period_ad_df_processed['Country'].isin(['TR', 'AZ'])]
+        else:
+            region_ad_data = period_ad_df_processed[period_ad_df_processed['Country'].isin(country_codes_or_flag)]
+        
+        if not region_ad_data.empty:
+            total_spent = region_ad_data['Amount spent (USD)'].sum()
+            total_reach = region_ad_data['Reach'].sum()
+            total_link_clicks = region_ad_data['Link clicks'].sum()
+            total_impressions = region_ad_data['Impressions'].sum()
+
+        ctr = (total_link_clicks / total_impressions) * 100 if total_impressions > 0 else 0
+        cpc = total_spent / total_link_clicks if total_link_clicks > 0 else 0
+        cpm = (total_spent / total_impressions) * 1000 if total_impressions > 0 else 0
+
+        # --- Get Sales Data ---
+        # Map display_name to region name in sales_df ('Turkey' -> 'TR', 'Azerbaijan' -> 'AZE', 'Global (TR ve AZ Hariç)' -> 'Global')
+        sales_region_name = display_name
+        if display_name == 'Turkey': sales_region_name = 'TR'
+        elif display_name == 'Azerbaijan': sales_region_name = 'AZE'
+        elif display_name == 'Global (TR ve AZ Hariç)': sales_region_name = 'Global'
+        
+        region_sales_data = period_sales_df[period_sales_df['Region'] == sales_region_name]
+
+        if not region_sales_data.empty:
+            randevu_sayisi = region_sales_data['Randevu'].sum() # Sum if multiple rows (should be 1)
+            satis_sayisi = region_sales_data['Satış'].sum()   # Sum if multiple rows
+
+        # --- Calculate Combined KPIs ---
+        randevu_maliyeti = total_spent / randevu_sayisi if randevu_sayisi > 0 else 0
+        cpa = total_spent / satis_sayisi if satis_sayisi > 0 else 0
+
+        kpi_data_list.append({
+            'Bölge': display_name,
+            'Total Spent (USD)': total_spent,
+            'Total Reach': total_reach,
+            'Total Link Clicks': total_link_clicks,
+            'CTR (%)': ctr,
+            'CPC (USD)': cpc,
+            'CPM (USD)': cpm,
+            'Randevu Sayısı': randevu_sayisi,
+            'Randevu Maliyeti (USD)': randevu_maliyeti,
+            'Satış Sayısı': satis_sayisi,
+            'CPA (USD)': cpa
+        })
+
+    if kpi_data_list:
+        kpi_df = pd.DataFrame(kpi_data_list)
+        cols_ordered = ['Bölge', 'Total Spent (USD)', 'Total Reach', 'Total Link Clicks', 'CTR (%)', 'CPC (USD)', 'CPM (USD)', 'Randevu Sayısı', 'Randevu Maliyeti (USD)', 'Satış Sayısı', 'CPA (USD)']
+        # Ensure all columns in cols_ordered are present in kpi_df, add if missing (e.g. if all values were 0)
+        for col in cols_ordered:
+            if col not in kpi_df.columns:
+                kpi_df[col] = 0 # Or np.nan depending on desired display for missing data
+        
+        # Get a new formatter dict that includes sales KPI formats
+        extended_formatters = column_formatters() # Assuming column_formatters is updated or new ones are added
+        extended_formatters.update({
+            'Randevu Sayısı': '{:,.0f}',
+            'Randevu Maliyeti (USD)': '${:,.2f}',
+            'Satış Sayısı': '{:,.0f}',
+            'CPA (USD)': '${:,.2f}'
+        })
+        st.dataframe(kpi_df[cols_ordered].style.format(extended_formatters), use_container_width=True)
+    else:
+        st.info("Bölgesel satış KPI'ları için veri bulunamadı.")
+    st.divider()
 
 # Paths to the NEW combined data files
 combined_file_p1 = 'data/combined_period1_10_22_may.csv'
@@ -193,15 +276,8 @@ with tab_p1:
         st.divider()
         # --- Sales Funnel for Period 1 (22 Mayıs) ---
         if df_sales is not None:
-            st.header("Satış Hunisi Performansı (22 Mayıs)")
             sales_p1_data = df_sales[df_sales['Period'] == '22 Mayıs']
-            if not sales_p1_data.empty:
-                sales_p1_display = sales_p1_data.copy()
-                sales_p1_display['Rndv-Ktlm (%)'] = np.where(sales_p1_display['Randevu'] > 0, (sales_p1_display['Katılım'] / sales_p1_display['Randevu']) * 100, 0)
-                sales_p1_display['Ktlm-Sts (%)'] = np.where(sales_p1_display['Katılım'] > 0, (sales_p1_display['Satış'] / sales_p1_display['Katılım']) * 100, 0)
-                sales_p1_display['Rndv-Sts (%)'] = np.where(sales_p1_display['Randevu'] > 0, (sales_p1_display['Satış'] / sales_p1_display['Randevu']) * 100, 0)
-                st.dataframe(sales_p1_display[['Region', 'Randevu', 'Katılım', 'Satış', 'Rndv-Ktlm (%)', 'Ktlm-Sts (%)', 'Rndv-Sts (%)']].style.format(column_formatters()), use_container_width=True)
-            else: st.info("22 Mayıs için satış verisi bulunamadı.")
+            display_regional_sales_kpis("22 Mayıs", df_p1_processed, sales_p1_data, country_code_to_name_map)
     else: st.error(f"`{combined_file_p1}` yüklenemedi.")
 
 with tab_p2:
@@ -247,15 +323,8 @@ with tab_p2:
         st.divider()
         # --- Sales Funnel for Period 2 (29 Mayıs) ---
         if df_sales is not None:
-            st.header("Satış Hunisi Performansı (29 Mayıs)")
             sales_p2_data = df_sales[df_sales['Period'] == '29 Mayıs']
-            if not sales_p2_data.empty:
-                sales_p2_display = sales_p2_data.copy()
-                sales_p2_display['Rndv-Ktlm (%)'] = np.where(sales_p2_display['Randevu'] > 0, (sales_p2_display['Katılım'] / sales_p2_display['Randevu']) * 100, 0)
-                sales_p2_display['Ktlm-Sts (%)'] = np.where(sales_p2_display['Katılım'] > 0, (sales_p2_display['Satış'] / sales_p2_display['Katılım']) * 100, 0)
-                sales_p2_display['Rndv-Sts (%)'] = np.where(sales_p2_display['Randevu'] > 0, (sales_p2_display['Satış'] / sales_p2_display['Randevu']) * 100, 0)
-                st.dataframe(sales_p2_display[['Region', 'Randevu', 'Katılım', 'Satış', 'Rndv-Ktlm (%)', 'Ktlm-Sts (%)', 'Rndv-Sts (%)']].style.format(column_formatters()), use_container_width=True)
-            else: st.info("29 Mayıs için satış verisi bulunamadı.")
+            display_regional_sales_kpis("29 Mayıs", df_p2_processed, sales_p2_data, country_code_to_name_map)
     else: st.error(f"`{combined_file_p2}` yüklenemedi.")
 
 # Note: Removed st.sidebar.header("Ayarlar") as per user action in previous step.
