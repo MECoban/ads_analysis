@@ -494,47 +494,8 @@ with tab2:
         st.header("Reklam Seti Bazlı KPI Analizleri (BV5 - Temizlenmiş Veri)")
 
         if 'Ad Set Name' in df_bv5_processed.columns:
-            tr_name = country_code_to_name_map.get('TR', 'TR')
-            az_name = country_code_to_name_map.get('AZ', 'AZ')
-            # top_n_ad_sets is already defined in BV2 section, reusing it (value is 10)
-
-            # Reusing cols_to_display_ad_sets and style_format_ad_sets from BV2 section
-
-            # Using the same helper function display_ad_set_analysis_tables from BV2 section
-            # Ensure it is defined in a scope accessible here or redefine/pass as parameter if needed.
-            # For simplicity, assuming it's accessible or we would redefine it here if it were complex.
-            # Since display_ad_set_analysis_tables is defined within tab1, it's not directly accessible.
-            # We need to either define it globally, pass it, or redefine it for tab2.
-            # For this edit, I will redefine a similar helper function for BV5 to keep changes localized to tab2.
-
-            def display_bv5_ad_set_analysis_tables(results_df, spent_df, label):
-                st.markdown(f"##### En Çok Sonuç Getiren İlk {top_n_ad_sets} Reklam Seti ({label} - BV5)")
-                if results_df is not None and not results_df.empty:
-                    st.dataframe(results_df[cols_to_display_ad_sets].style.format(style_format_ad_sets), use_container_width=True)
-                else:
-                    st.info(f"Sonuçlara göre sıralanacak reklam seti bulunamadı ({label} - BV5)." )
-                
-                st.markdown(f"##### En Çok Harcama Yapan İlk {top_n_ad_sets} Reklam Seti ({label} - BV5)")
-                if spent_df is not None and not spent_df.empty:
-                    st.dataframe(spent_df[cols_to_display_ad_sets].style.format(style_format_ad_sets), use_container_width=True)
-                else:
-                    st.info(f"Harcamalara göre sıralanacak reklam seti bulunamadı ({label} - BV5)." )
-                st.caption(f"Not: Yukarıdaki reklam seti analizleri {label} (BV5) için geçerlidir.")
-                st.divider()
-
-            st.markdown(f"#### {tr_name} Reklam Seti Performansı (BV5)")
-            bv5_tr_results_df, bv5_tr_spent_df = analyze_ad_sets_bv5(df_bv5_processed, target_countries=['TR'], filter_type='include', top_n=top_n_ad_sets)
-            display_bv5_ad_set_analysis_tables(bv5_tr_results_df, bv5_tr_spent_df, tr_name)
-
-            st.markdown(f"#### {az_name} Reklam Seti Performansı (BV5)")
-            bv5_az_results_df, bv5_az_spent_df = analyze_ad_sets_bv5(df_bv5_processed, target_countries=['AZ'], filter_type='include', top_n=top_n_ad_sets)
-            display_bv5_ad_set_analysis_tables(bv5_az_results_df, bv5_az_spent_df, az_name)
-            
-            bv5_global_label = f"Global ({tr_name} ve {az_name} Hariç) - BV5"
-            st.markdown(f"#### {bv5_global_label} Reklam Seti Performansı")
-            bv5_global_results_df, bv5_global_spent_df = analyze_ad_sets_bv5(df_bv5_processed, target_countries=['TR', 'AZ'], filter_type='exclude', top_n=top_n_ad_sets)
-            display_bv5_ad_set_analysis_tables(bv5_global_results_df, bv5_global_spent_df, bv5_global_label)
-
+            # Using the new global display_ad_set_analysis function for BV5
+            display_ad_set_analysis(df_bv5_processed, analyze_ad_sets_bv5, "BV5 (10-22 Mayıs)", top_n_ad_sets=top_n_ad_sets)
         else:
             st.warning(f"`Ad Set Name` sütunu BV5 veri setinde (`{cleaned_bv5_file}`) bulunamadığı için reklam seti bazlı analizler yapılamıyor.")
 
