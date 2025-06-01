@@ -369,7 +369,10 @@ with tab2:
     """) # Keep existing intro for tab2
 
     if df_bv5_cleaned is not None:
-        # Display BV5 data cleaning summary (using placeholder numbers for now, as cleaner script output is not directly captured here)
+        # Define top_n_ad_sets for this tab before it's used
+        top_n_ad_sets = 10 
+
+        # Display BV5 data cleaning summary
         # In a real scenario, these numbers would come from the bv5_cleaner.py execution log or by reading the file
         original_bv5_rows = 8396 # Placeholder, actual: 8396
         cleaned_bv5_rows = 8390  # Placeholder, actual: 8390
