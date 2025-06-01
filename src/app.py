@@ -479,4 +479,3 @@ with tab4: # TT BV2 (23-29 Mayıs)
     else:
         st.error(f"`{cleaned_tt_bv2_may23_file}` dosyası yüklenemediği için {tab4_title} analizleri gösterilemiyor.")
 
-st.sidebar.header("Ayarlar")
