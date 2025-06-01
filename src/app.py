@@ -222,6 +222,21 @@ df_bv5_cleaned = load_data(cleaned_bv5_file)
 df_bv5_may23_cleaned = load_data(cleaned_bv5_may23_file) # Load new BV5 data
 df_tt_bv2_may23_cleaned = load_data(cleaned_tt_bv2_may23_file) # Load new TT BV2 data
 
+# ---- Start Temporary Debugging for Streamlit Cloud ----
+st.sidebar.subheader("Debug: /mount/src/ads_analysis/data/ contents")
+try:
+    data_dir_path_on_cloud = "/mount/src/ads_analysis/data/"
+    if os.path.exists(data_dir_path_on_cloud):
+        cloud_data_files = os.listdir(data_dir_path_on_cloud)
+        st.sidebar.write(f"Files in {data_dir_path_on_cloud}:")
+        for f_name in cloud_data_files:
+            st.sidebar.write(f"- {f_name}")
+    else:
+        st.sidebar.warning(f"Debug: Path {data_dir_path_on_cloud} does NOT exist on Streamlit Cloud.")
+except Exception as e_debug:
+    st.sidebar.error(f"Debug: Error listing {data_dir_path_on_cloud}: {e_debug}")
+# ---- End Temporary Debugging ----
+
 st.title("Facebook Reklam Performans Analizi Dashboard")
 
 tab1_title = "BV2 Analizi (10-22 Mayıs)"
