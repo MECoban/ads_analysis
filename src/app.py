@@ -548,8 +548,18 @@ with tab3: # New tab for BV5 May 23-29
         else:
             st.info("BV5 (23-29 Mayıs) için ülke bazlı KPI verisi bulunamadı.")
         
+        # Prepare dataframe for display_ad_set_analysis by ensuring 'Ad Set Name' column exists
+        df_bv5_may23_for_ad_set_display = df_bv5_may23_processed.copy()
+        if 'Campaign name' in df_bv5_may23_for_ad_set_display.columns:
+            df_bv5_may23_for_ad_set_display.rename(columns={'Campaign name': 'Ad Set Name'}, inplace=True)
+        else:
+            # If 'Campaign name' is also missing, display_ad_set_analysis will show its own warning
+            # but we ensure 'Ad Set Name' is at least attempted or explicitly missing.
+            if 'Ad Set Name' not in df_bv5_may23_for_ad_set_display.columns:
+                 df_bv5_may23_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set" # Placeholder
+
         # Use the global ad set display function
-        display_ad_set_analysis(df_bv5_may23_processed, analyze_ad_sets_bv5_may23, "BV5 (23-29 Mayıs)")
+        display_ad_set_analysis(df_bv5_may23_for_ad_set_display, analyze_ad_sets_bv5_may23, "BV5 (23-29 Mayıs)")
     else:
         st.error(f"Temizlenmiş BV5 (23-29 Mayıs) verisi ({cleaned_bv5_may23_file}) yüklenemedi veya boş.")
 
