@@ -5,7 +5,7 @@ import os # Added import
 from global_analyzer import analyze_ad_sets # Removed calculate_kpis_for_analysis import as it's not directly used here
 from bv5_analyzer import analyze_ad_sets_bv5 # Added import for BV5
 from bv5_may23_analyzer import analyze_ad_sets as analyze_ad_sets_bv5_may23_specific # Changed import with alias
-from tt_bv2_may23_analyzer import analyze_ad_sets_tt_bv2_may23 # New import
+from tt_bv2_may23_analyzer import analyze_ad_sets as analyze_ad_sets_tt_bv2_may23_specific # Changed import with alias
 
 st.set_page_config(layout="wide")
 
@@ -168,7 +168,7 @@ def display_ad_set_analysis(df_processed, analyze_function, dataset_label_short,
 
     st.markdown(f"#### {az_name} Reklam Seti Performansı")
     az_results_df, az_spent_df = analyze_function(df_processed, target_countries=['AZ'], filter_type='include', top_n=top_n_ad_sets)
-    _display_single_ad_set_table_set(az_results_df, az_spent_df, az_name)
+    _display_single_ad_set_analysis(az_results_df, az_spent_df, az_name)
     
     global_label_suffix = f"Global ({tr_name} ve {az_name} Hariç)"
     st.markdown(f"#### {global_label_suffix} Reklam Seti Performansı")
@@ -596,7 +596,7 @@ with tab4: # New tab for TT BV2 May 23-29
                  df_tt_bv2_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set" # Placeholder if no campaign/ad set name found
 
         # Use the global ad set display function
-        display_ad_set_analysis(df_tt_bv2_for_ad_set_display, analyze_ad_sets_tt_bv2_may23, "TT BV2 (23-29 Mayıs)")
+        display_ad_set_analysis(df_tt_bv2_for_ad_set_display, analyze_ad_sets_tt_bv2_may23_specific, "TT BV2 (23-29 Mayıs)") # Use aliased function
     else:
         st.error(f"Temizlenmiş TT BV2 (23-29 Mayıs) verisi ({cleaned_tt_bv2_may23_file}) yüklenemedi veya boş.")
 
