@@ -168,7 +168,7 @@ def display_ad_set_analysis(df_processed, analyze_function, dataset_label_short,
 
     st.markdown(f"#### {az_name} Reklam Seti Performansı")
     az_results_df, az_spent_df = analyze_function(df_processed, target_countries=['AZ'], filter_type='include', top_n=top_n_ad_sets)
-    _display_single_ad_set_table_set(az_results_df, az_spent_df, az_name)
+    _display_single_ad_set_analysis(az_results_df, az_spent_df, az_name)
     
     global_label_suffix = f"Global ({tr_name} ve {az_name} Hariç)"
     st.markdown(f"#### {global_label_suffix} Reklam Seti Performansı")
@@ -222,20 +222,20 @@ df_bv5_cleaned = load_data(cleaned_bv5_file)
 df_bv5_may23_cleaned = load_data(cleaned_bv5_may23_file) # Load new BV5 data
 df_tt_bv2_may23_cleaned = load_data(cleaned_tt_bv2_may23_file) # Load new TT BV2 data
 
-# ---- Start Temporary Debugging for Streamlit Cloud ----
-st.sidebar.subheader("Debug: /mount/src/ads_analysis/data/ contents")
-try:
-    data_dir_path_on_cloud = "/mount/src/ads_analysis/data/"
-    if os.path.exists(data_dir_path_on_cloud):
-        cloud_data_files = os.listdir(data_dir_path_on_cloud)
-        st.sidebar.write(f"Files in {data_dir_path_on_cloud}:")
-        for f_name in cloud_data_files:
-            st.sidebar.write(f"- {f_name}")
-    else:
-        st.sidebar.warning(f"Debug: Path {data_dir_path_on_cloud} does NOT exist on Streamlit Cloud.")
-except Exception as e_debug:
-    st.sidebar.error(f"Debug: Error listing {data_dir_path_on_cloud}: {e_debug}")
-# ---- End Temporary Debugging ----
+# # ---- Start Temporary Debugging for Streamlit Cloud ----
+# st.sidebar.subheader("Debug: /mount/src/ads_analysis/data/ contents")
+# try:
+#     data_dir_path_on_cloud = "/mount/src/ads_analysis/data/"
+#     if os.path.exists(data_dir_path_on_cloud):
+#         cloud_data_files = os.listdir(data_dir_path_on_cloud)
+#         st.sidebar.write(f"Files in {data_dir_path_on_cloud}:")
+#         for f_name in cloud_data_files:
+#             st.sidebar.write(f"- {f_name}")
+#     else:
+#         st.sidebar.warning(f"Debug: Path {data_dir_path_on_cloud} does NOT exist on Streamlit Cloud.")
+# except Exception as e_debug:
+#     st.sidebar.error(f"Debug: Error listing {data_dir_path_on_cloud}: {e_debug}")
+# # ---- End Temporary Debugging ----
 
 st.title("Facebook Reklam Performans Analizi Dashboard")
 
