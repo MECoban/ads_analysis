@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from global_analyzer import analyze_ad_sets # Removed calculate_kpis_for_analysis import as it's not directly used here
 from bv5_analyzer import analyze_ad_sets_bv5 # Added import for BV5
+from bv5_may23_analyzer import analyze_ad_sets_bv5_may23 # New import
+from tt_bv2_may23_analyzer import analyze_ad_sets_tt_bv2_may23 # New import
 
 st.set_page_config(layout="wide")
 
@@ -57,15 +59,25 @@ bv5_file_name = 'BV5-All-report-May-10-2025-to-May-22-2025.csv' # For display pu
 cleaned_bv5_file = 'data/clean_bv5_global.csv' # Path for cleaned BV5 data
 original_bv5_file_name = 'BV5-All-report-May-10-2025-to-May-22-2025.csv' # For display
 
+cleaned_bv5_may23_file = 'data/clean_bv5_may23_global.csv' # Path for cleaned BV5 May 23-29 data
+original_bv5_may23_file_name = 'BV5-May-23-2025-to-May-29-2025.csv' # For display
+
+cleaned_tt_bv2_may23_file = 'data/clean_tt_bv2_may23_global.csv' # Path for cleaned TT BV2 May 23-29 data
+original_tt_bv2_may23_file_name = 'TT-Reklam-Dataları-Global-BV2-23-29 May.csv' # For display
+
 df_bv2_cleaned = load_data(cleaned_bv2_file)
-df_bv5_cleaned = load_data(cleaned_bv5_file) # Load cleaned BV5 data
+df_bv5_cleaned = load_data(cleaned_bv5_file)
+df_bv5_may23_cleaned = load_data(cleaned_bv5_may23_file) # Load new BV5 data
+df_tt_bv2_may23_cleaned = load_data(cleaned_tt_bv2_may23_file) # Load new TT BV2 data
 
 st.title("Facebook Reklam Performans Analizi Dashboard")
 
 tab1_title = "BV2 Analizi (10-22 Mayıs)"
 tab2_title = "BV5 Analizi (10-22 Mayıs)"
+tab3_title = "BV5 Analizi (23-29 Mayıs)"
+tab4_title = "TT BV2 Analizi (23-29 Mayıs)"
 
-tab1, tab2 = st.tabs([tab1_title, tab2_title])
+tab1, tab2, tab3, tab4 = st.tabs([tab1_title, tab2_title, tab3_title, tab4_title])
 
 with tab1:
     st.header(tab1_title)
@@ -420,3 +432,43 @@ with tab2:
     # The old descriptive markdown for tab2 has been replaced by the actual analysis.
     # Remove or comment out the old markdown if it was extensive and is no longer needed.
     # The initial part of the old markdown is kept ("Bu sekme, ... ayrılmıştır.")
+
+with tab3: # New tab for BV5 May 23-29
+    st.header(tab3_title)
+    if df_bv5_may23_cleaned is not None and not df_bv5_may23_cleaned.empty:
+        st.markdown(f"**Orjinal Dosya:** `{original_bv5_may23_file_name}`")
+        st.markdown(f"**Temizlenmiş Dosya:** `{cleaned_bv5_may23_file}`")
+        
+        original_rows_bv5_may23 = get_original_row_count(f"data/{original_bv5_may23_file_name}")
+        cleaned_rows_bv5_may23 = len(df_bv5_may23_cleaned)
+        display_cleaning_info(original_rows_bv5_may23, cleaned_rows_bv5_may23, "BV5 (23-29 Mayıs)")
+
+        st.subheader("Ülke Bazlı KPI'lar (BV5 23-29 Mayıs)")
+        kpis_to_show_bv5_may23 = prepare_country_kpis(df_bv5_may23_cleaned, dataset_name="BV5 (23-29 Mayıs)")
+        st.dataframe(kpis_to_show_bv5_may23.style.format(formatter=column_formatters()))
+        
+        display_ad_set_analysis(df_bv5_may23_cleaned, analyze_ad_sets_bv5_may23, "BV5 (23-29 Mayıs)")
+    else:
+        st.error(f"Temizlenmiş BV5 (23-29 Mayıs) verisi ({cleaned_bv5_may23_file}) yüklenemedi veya boş.")
+
+with tab4: # New tab for TT BV2 May 23-29
+    st.header(tab4_title)
+    if df_tt_bv2_may23_cleaned is not None and not df_tt_bv2_may23_cleaned.empty:
+        st.markdown(f"**Orjinal Dosya:** `{original_tt_bv2_may23_file_name}`")
+        st.markdown(f"**Temizlenmiş Dosya:** `{cleaned_tt_bv2_may23_file}`")
+        
+        original_rows_tt_bv2_may23 = get_original_row_count(f"data/{original_tt_bv2_may23_file_name}")
+        cleaned_rows_tt_bv2_may23 = len(df_tt_bv2_may23_cleaned)
+        display_cleaning_info(original_rows_tt_bv2_may23, cleaned_rows_tt_bv2_may23, "TT BV2 (23-29 Mayıs)")
+
+        st.subheader("Ülke Bazlı KPI'lar (TT BV2 23-29 Mayıs)")
+        kpis_to_show_tt_bv2_may23 = prepare_country_kpis(df_tt_bv2_may23_cleaned, dataset_name="TT BV2 (23-29 Mayıs)")
+        st.dataframe(kpis_to_show_tt_bv2_may23.style.format(formatter=column_formatters()))
+        
+        # For TT BV2, we use the same logic as the original BV2 (global_analyzer's analyze_ad_sets)
+        # but with the new analyzer function that has a different name
+        display_ad_set_analysis(df_tt_bv2_may23_cleaned, analyze_ad_sets_tt_bv2_may23, "TT BV2 (23-29 Mayıs)")
+    else:
+        st.error(f"Temizlenmiş TT BV2 (23-29 Mayıs) verisi ({cleaned_tt_bv2_may23_file}) yüklenemedi veya boş.")
+
+st.sidebar.header("Ayarlar")
