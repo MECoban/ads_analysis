@@ -4,7 +4,7 @@ import numpy as np
 import os # Added import
 from global_analyzer import analyze_ad_sets # Removed calculate_kpis_for_analysis import as it's not directly used here
 from bv5_analyzer import analyze_ad_sets_bv5 # Added import for BV5
-from bv5_may23_analyzer import analyze_ad_sets_bv5_may23 # New import
+from bv5_may23_analyzer import analyze_ad_sets as analyze_ad_sets_bv5_may23_specific # Changed import with alias
 from tt_bv2_may23_analyzer import analyze_ad_sets_tt_bv2_may23 # New import
 
 st.set_page_config(layout="wide")
@@ -559,7 +559,7 @@ with tab3: # New tab for BV5 May 23-29
                  df_bv5_may23_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set" # Placeholder
 
         # Use the global ad set display function
-        display_ad_set_analysis(df_bv5_may23_for_ad_set_display, analyze_ad_sets_bv5_may23, "BV5 (23-29 Mayıs)")
+        display_ad_set_analysis(df_bv5_may23_for_ad_set_display, analyze_ad_sets_bv5_may23_specific, "BV5 (23-29 Mayıs)") # Use aliased function
     else:
         st.error(f"Temizlenmiş BV5 (23-29 Mayıs) verisi ({cleaned_bv5_may23_file}) yüklenemedi veya boş.")
 
