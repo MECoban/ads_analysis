@@ -246,358 +246,237 @@ tab4_title = "TT BV2 Analizi (23-29 Mayıs)"
 
 tab1, tab2, tab3, tab4 = st.tabs([tab1_title, tab2_title, tab3_title, tab4_title])
 
+# Define these globally or ensure they are available/passed to tabs
+spending_threshold = 30 # Consistent threshold
+cols_to_display_countries = ['Country', 'Total Spent (USD)', 'Total Reach', 'Total Link Clicks', 'Total Results', 'CTR (%)', 'CPC (USD)', 'CPM (USD)', 'Avg. Cost per Result (USD)']
+style_format_countries = column_formatters() # Use the global formatter
+
 with tab1:
     st.header(tab1_title)
-
     if df_bv2_cleaned is not None:
+        original_rows = get_original_row_count(original_bv2_file_name)
+        # The existing detailed data cleaning markdown for tab1 can remain if it's specific
         st.subheader(f"Veri Temizleme Süreci ({original_bv2_file_name})")
         st.markdown(f"""
         Analizler için kullanılan orijinal `{original_bv2_file_name}` veri seti üzerinde bir temizlik işlemi uygulanmıştır:
         - **`Country` (Ülke) sütununda değeri olmayan satırlar veri setinden çıkarıldı.** Bu işlem, hem Facebook'un otomatik oluşturduğu olası bir genel toplam satırını hem de ülke bilgisi eksik olan diğer münferit satırları kapsamaktadır.
-        - Orijinal veri setinde **20,855 satır** bulunuyordu.
-        - Temizlik işlemi sonucunda **24 satır çıkarılarak** veri seti **20,831 satıra** düşürüldü.
-        - Bu temizlenmiş ve analize hazır veri, `data/clean_global.csv` dosyasına kaydedilmiştir.
-        
+        - Orijinal veri setinde **{original_rows:,} satır** bulunuyordu.
+        - Temizlik işlemi sonucunda **{original_rows - len(df_bv2_cleaned):,} satır çıkarılarak** veri seti **{len(df_bv2_cleaned):,} satıra** düşürüldü.
+        - Bu temizlenmiş ve analize hazır veri, `{cleaned_bv2_file}` dosyasına kaydedilmiştir.
         Bu ön işleme adımı, analizlerimizin yalnızca geçerli ve tanımlı ülke verilerine dayanmasını sağlayarak daha doğru ve güvenilir sonuçlar elde etmemize olanak tanımıştır.
         """)
         st.divider()
 
-        st.subheader("Detaylı KPI Analizleri (BV2 - Temizlenmiş Veri)")
-        
-        # Process the raw cleaned data once for base metrics needed for various analyses
-        # This df_bv2_processed will be the input for country summaries and ad set analyses
-        df_bv2_processed = calculate_kpis_for_display(df_bv2_cleaned.copy()) # Use the renamed display-focused KPI function
+        st.subheader(f"Detaylı KPI Analizleri ({tab1_title})")
+        df_bv2_processed = calculate_kpis_for_display(df_bv2_cleaned.copy())
+        country_summary_kpis_tab1 = prepare_country_kpis(df_bv2_processed, dataset_name=tab1_title)
 
-        # --- Country-Level Analysis --- 
-        country_summary_agg = df_bv2_processed.groupby('Country').agg(
-            total_spent=('Amount spent (USD)', 'sum'),
-            total_impressions=('Impressions', 'sum'),
-            total_link_clicks=('Link clicks', 'sum'),
-            total_reach=('Reach', 'sum'),
-            total_results=('Results', 'sum')
-        ).reset_index()
-
-        country_summary_for_kpis = country_summary_agg.rename(columns={
-            'total_spent': 'Amount spent (USD)',
-            'total_impressions': 'Impressions',
-            'total_link_clicks': 'Link clicks',
-            'total_reach': 'Reach',
-            'total_results': 'Results'
-        })
-        country_summary_kpis = calculate_kpis_for_display(country_summary_for_kpis) # Use display KPI func
-        country_summary_kpis['Avg. Cost per Result (USD)'] = np.where(
-            country_summary_kpis['Results'] > 0, 
-            country_summary_kpis['Amount spent (USD)'] / country_summary_kpis['Results'], 0)
-        country_summary_kpis = country_summary_kpis.rename(columns={
-            'Amount spent (USD)': 'Total Spent (USD)',
-            'Impressions': 'Total Impressions',
-            'Link clicks': 'Total Link Clicks',
-            'Reach': 'Total Reach',
-            'Results': 'Total Results'
-        }).sort_values(by='Total Spent (USD)', ascending=False)
-
-        # 1. Display countries with spending over the threshold
-        spending_threshold = 100
         st.markdown(f"#### Harcaması {spending_threshold} USD Üzerinde Olan Ülkeler ve KPI'ları")
-        top_countries_df = country_summary_kpis[country_summary_kpis['Total Spent (USD)'] > spending_threshold]
-        
-        cols_to_display_countries = ['Country', 'Total Spent (USD)', 'Total Reach', 'Total Link Clicks', 'Total Results', 'CTR (%)', 'CPC (USD)', 'CPM (USD)', 'Avg. Cost per Result (USD)']
-        style_format_countries = {
-            "Total Spent (USD)": "${:,.2f}",
-            "Total Reach": "{:,.0f}",
-            "Total Link Clicks": "{:,.0f}",
-            "Total Results": "{:,.0f}",
-            "CTR (%)": "{:.2f}%",
-            "CPC (USD)": "${:,.2f}",
-            "CPM (USD)": "${:,.2f}",
-            "Avg. Cost per Result (USD)": "${:,.2f}"
-        }
-
-        if not top_countries_df.empty:
-            display_top_countries_df = top_countries_df.copy()
-            display_top_countries_df['Country'] = display_top_countries_df['Country'].map(country_code_to_name_map).fillna(display_top_countries_df['Country'])
-            st.dataframe(display_top_countries_df[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
+        top_countries_df_tab1 = country_summary_kpis_tab1[country_summary_kpis_tab1['Total Spent (USD)'] > spending_threshold]
+        if not top_countries_df_tab1.empty:
+            st.dataframe(top_countries_df_tab1[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
         else:
-            st.info(f"Belirtilen harcama ({spending_threshold} USD) üzerinde ülke bulunamadı.")
+            st.info(f"Belirtilen harcama ({spending_threshold} USD) üzerinde ülke bulunamadı ({tab1_title}).")
 
-        # 2. KPIs for Turkey (TR) and Azerbaijan (AZ)
         st.markdown("#### Türkiye (TR) ve Azerbaycan (AZ) için Özel KPI Değerleri")
-        tr_az_countries_df = country_summary_kpis[country_summary_kpis['Country'].isin(['TR', 'AZ'])]
-        
-        if not tr_az_countries_df.empty:
-            display_tr_az_df = tr_az_countries_df.copy()
-            display_tr_az_df['Country'] = display_tr_az_df['Country'].map(country_code_to_name_map).fillna(display_tr_az_df['Country'])
-            st.dataframe(display_tr_az_df[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
+        tr_az_countries_df_tab1 = country_summary_kpis_tab1[country_summary_kpis_tab1['Country'].isin(['Turkey', 'Azerbaijan'])]
+        if not tr_az_countries_df_tab1.empty:
+            st.dataframe(tr_az_countries_df_tab1[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
         else:
-            st.info("Veri setinde Türkiye (TR) veya Azerbaycan (AZ) için tanımlı harcama bilgisi bulunamadı veya harcamalar belirtilen eşiklerin altında.")
+            st.info(f"Veri setinde Türkiye (TR) veya Azerbaycan (AZ) için tanımlı harcama bilgisi bulunamadı ({tab1_title}).")
 
-        # 3. Global Averages (excluding TR and AZ)
         st.markdown("#### Global Ortalamalar (Türkiye ve Azerbaycan Hariç)")
-        df_global_avg_source = df_bv2_processed[~df_bv2_processed['Country'].isin(['TR', 'AZ'])]
-        
-        if not df_global_avg_source.empty:
-            global_total_spent = df_global_avg_source['Amount spent (USD)'].sum()
-            global_total_impressions = df_global_avg_source['Impressions'].sum()
-            global_total_link_clicks = df_global_avg_source['Link clicks'].sum()
-            global_total_reach = df_global_avg_source['Reach'].sum()
-            global_total_results = df_global_avg_source['Results'].sum()
-
+        df_global_avg_source_tab1 = df_bv2_processed[~df_bv2_processed['Country'].isin(['TR', 'AZ'])]
+        if not df_global_avg_source_tab1.empty:
+            global_total_spent = df_global_avg_source_tab1['Amount spent (USD)'].sum()
+            global_total_impressions = df_global_avg_source_tab1['Impressions'].sum()
+            global_total_link_clicks = df_global_avg_source_tab1['Link clicks'].sum()
+            global_total_reach = df_global_avg_source_tab1['Reach'].sum()
+            global_total_results = df_global_avg_source_tab1['Results'].sum()
             global_avg_ctr = (global_total_link_clicks / global_total_impressions) * 100 if global_total_impressions > 0 else 0
             global_avg_cpc = global_total_spent / global_total_link_clicks if global_total_link_clicks > 0 else 0
             global_avg_cpm = (global_total_spent / global_total_impressions) * 1000 if global_total_impressions > 0 else 0
             global_avg_cost_per_result = (global_total_spent / global_total_results) if global_total_results > 0 else 0
-
             global_avg_data = {
-                'Metrik': ['Global Ortalama (TR ve AZ Hariç)'],
-                'Toplam Harcama (USD)': [global_total_spent],
-                'Toplam Reach': [global_total_reach],
-                'Toplam Gösterim (Impressions)': [global_total_impressions],
-                'Toplam Link Tıklaması': [global_total_link_clicks],
-                'Toplam Sonuç (Results)': [global_total_results],
-                'Ortalama CTR (%)': [global_avg_ctr],
-                'Ortalama CPC (USD)': [global_avg_cpc],
-                'Ortalama CPM (USD)': [global_avg_cpm],
-                'Ortalama Sonuç Başına Maliyet (USD)': [global_avg_cost_per_result]
+                'Metrik': [f'Global Ortalama (TR ve AZ Hariç) - {tab1_title}'], 'Toplam Harcama (USD)': [global_total_spent],
+                'Toplam Reach': [global_total_reach], 'Toplam Gösterim (Impressions)': [global_total_impressions],
+                'Toplam Link Tıklaması': [global_total_link_clicks], 'Toplam Sonuç (Results)': [global_total_results],
+                'Ortalama CTR (%)': [global_avg_ctr], 'Ortalama CPC (USD)': [global_avg_cpc],
+                'Ortalama CPM (USD)': [global_avg_cpm], 'Ortalama Sonuç Başına Maliyet (USD)': [global_avg_cost_per_result]
             }
-            global_avg_display_df = pd.DataFrame(global_avg_data)
-            st.dataframe(global_avg_display_df.style.format({
-                "Toplam Harcama (USD)": "${:,.2f}",
-                "Toplam Reach": "{:,.0f}",
-                "Toplam Gösterim (Impressions)": "{:,.0f}",
-                "Toplam Link Tıklaması": "{:,.0f}",
-                "Toplam Sonuç (Results)": "{:,.0f}",
-                "Ortalama CTR (%)": "{:.2f}%",
-                "Ortalama CPC (USD)": "${:,.2f}",
-                "Ortalama CPM (USD)": "${:,.2f}",
-                "Ortalama Sonuç Başına Maliyet (USD)": "${:,.2f}",
-            }), use_container_width=True)
+            global_avg_display_df_tab1 = pd.DataFrame(global_avg_data)
+            st.dataframe(global_avg_display_df_tab1.style.format(column_formatters()), use_container_width=True)
         else:
-            st.info("TR ve AZ dışındaki ülkeler için global ortalama hesaplanacak veri bulunamadı.")
-
-        # --- Ad Set Analysis Section ---
-        st.divider()
-        # Using the new global display_ad_set_analysis function
-        display_ad_set_analysis(df_bv2_processed, analyze_ad_sets, "BV2 (10-22 Mayıs)", top_n_ad_sets=10)
-        # The local display_ad_set_analysis_tables and its calls are now replaced by the above single call
-
+            st.info(f"TR ve AZ dışındaki ülkeler için global ortalama hesaplanacak veri bulunamadı ({tab1_title}).")
+        
+        display_ad_set_analysis(df_bv2_processed, analyze_ad_sets, tab1_title, top_n_ad_sets=10)
     else:
-        st.error(f"`{cleaned_bv2_file}` dosyası yüklenemediği için BV2 analizleri gösterilemiyor. Lütfen dosyanın `data` klasöründe olduğundan ve doğru formatta olduğundan emin olun.")
+        st.error(f"`{cleaned_bv2_file}` dosyası yüklenemediği için {tab1_title} analizleri gösterilemiyor.")
 
-with tab2:
+with tab2: # BV5 (10-22 Mayıs)
     st.header(tab2_title)
-    st.markdown(f"""
-    Bu sekme, `{bv5_file_name}` adlı veri setine ait analizler için ayrılmıştır.
-    """) # Keep existing intro for tab2
-
     if df_bv5_cleaned is not None:
-        # Define top_n_ad_sets for this tab before it's used
-        top_n_ad_sets = 10 
-
-        # Display BV5 data cleaning summary
-        # In a real scenario, these numbers would come from the bv5_cleaner.py execution log or by reading the file
-        original_bv5_rows = 8396 # Placeholder, actual: 8396
-        cleaned_bv5_rows = 8390  # Placeholder, actual: 8390
-        removed_bv5_rows = original_bv5_rows - cleaned_bv5_rows
-
-        st.subheader(f"Veri Temizleme Süreci ({original_bv5_file_name})")
-        st.markdown(f"""
-        Analizler için kullanılan orijinal `{original_bv5_file_name}` veri seti üzerinde bir temizlik işlemi uygulanmıştır:
-        - **`Country` (Ülke) sütununda değeri olmayan satırlar veri setinden çıkarıldı.**
-        - Orijinal veri setinde **{original_bv5_rows:,} satır** bulunuyordu.
-        - Temizlik işlemi sonucunda **{removed_bv5_rows:,} satır çıkarılarak** veri seti **{cleaned_bv5_rows:,} satıra** düşürüldü.
-        - Bu temizlenmiş ve analize hazır veri, `{cleaned_bv5_file}` dosyasına kaydedilmiştir.
-        
-        Bu ön işleme adımı, analizlerimizin yalnızca geçerli ve tanımlı ülke verilerine dayanmasını sağlayarak daha doğru ve güvenilir sonuçlar elde etmemize olanak tanımıştır.
-        """)
-        st.divider()
-
-        st.subheader("Detaylı KPI Analizleri (BV5 - Temizlenmiş Veri)")
-        
+        original_rows = get_original_row_count(original_bv5_file_name)
+        display_cleaning_info(original_rows, len(df_bv5_cleaned), original_bv5_file_name) # Use original_bv5_file_name for dataset_name
+        st.subheader(f"Detaylı KPI Analizleri ({tab2_title})")
         df_bv5_processed = calculate_kpis_for_display(df_bv5_cleaned.copy())
+        country_summary_kpis_tab2 = prepare_country_kpis(df_bv5_processed, dataset_name=tab2_title)
 
-        # --- BV5 Country-Level Analysis (mirroring BV2) ---
-        bv5_country_summary_agg = df_bv5_processed.groupby('Country').agg(
-            total_spent=('Amount spent (USD)', 'sum'),
-            total_impressions=('Impressions', 'sum'),
-            total_link_clicks=('Link clicks', 'sum'),
-            total_reach=('Reach', 'sum'),
-            total_results=('Results', 'sum')
-        ).reset_index()
-
-        bv5_country_summary_for_kpis = bv5_country_summary_agg.rename(columns={
-            'total_spent': 'Amount spent (USD)',
-            'total_impressions': 'Impressions',
-            'total_link_clicks': 'Link clicks',
-            'total_reach': 'Reach',
-            'total_results': 'Results'
-        })
-        bv5_country_summary_kpis = calculate_kpis_for_display(bv5_country_summary_for_kpis)
-        bv5_country_summary_kpis['Avg. Cost per Result (USD)'] = np.where(
-            bv5_country_summary_kpis['Results'] > 0, 
-            bv5_country_summary_kpis['Amount spent (USD)'] / bv5_country_summary_kpis['Results'], 0)
-        bv5_country_summary_kpis = bv5_country_summary_kpis.rename(columns={
-            'Amount spent (USD)': 'Total Spent (USD)',
-            'Impressions': 'Total Impressions',
-            'Link clicks': 'Total Link Clicks',
-            'Reach': 'Total Reach',
-            'Results': 'Total Results'
-        }).sort_values(by='Total Spent (USD)', ascending=False)
-
-        # 1. Display BV5 countries with spending over the threshold
-        # Using the same spending_threshold and display columns/styles as BV2 for consistency
-        st.markdown(f"#### Harcaması {spending_threshold} USD Üzerinde Olan Ülkeler ve KPI'ları (BV5)")
-        bv5_top_countries_df = bv5_country_summary_kpis[bv5_country_summary_kpis['Total Spent (USD)'] > spending_threshold]
-        
-        if not bv5_top_countries_df.empty:
-            bv5_display_top_countries_df = bv5_top_countries_df.copy()
-            bv5_display_top_countries_df['Country'] = bv5_display_top_countries_df['Country'].map(country_code_to_name_map).fillna(bv5_display_top_countries_df['Country'])
-            st.dataframe(bv5_display_top_countries_df[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
+        st.markdown(f"#### Harcaması {spending_threshold} USD Üzerinde Olan Ülkeler ve KPI'ları")
+        top_countries_df_tab2 = country_summary_kpis_tab2[country_summary_kpis_tab2['Total Spent (USD)'] > spending_threshold]
+        if not top_countries_df_tab2.empty:
+            st.dataframe(top_countries_df_tab2[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
         else:
-            st.info(f"Belirtilen harcama ({spending_threshold} USD) üzerinde ülke bulunamadı (BV5)." )
+            st.info(f"Belirtilen harcama ({spending_threshold} USD) üzerinde ülke bulunamadı ({tab2_title}).")
 
-        # 2. BV5 KPIs for Turkey (TR) and Azerbaijan (AZ)
-        st.markdown("#### Türkiye (TR) ve Azerbaycan (AZ) için Özel KPI Değerleri (BV5)")
-        bv5_tr_az_countries_df = bv5_country_summary_kpis[bv5_country_summary_kpis['Country'].isin(['TR', 'AZ'])]
-        
-        if not bv5_tr_az_countries_df.empty:
-            bv5_display_tr_az_df = bv5_tr_az_countries_df.copy()
-            bv5_display_tr_az_df['Country'] = bv5_display_tr_az_df['Country'].map(country_code_to_name_map).fillna(bv5_display_tr_az_df['Country'])
-            st.dataframe(bv5_display_tr_az_df[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
+        st.markdown("#### Türkiye (TR) ve Azerbaycan (AZ) için Özel KPI Değerleri")
+        tr_az_countries_df_tab2 = country_summary_kpis_tab2[country_summary_kpis_tab2['Country'].isin(['Turkey', 'Azerbaijan'])]
+        if not tr_az_countries_df_tab2.empty:
+            st.dataframe(tr_az_countries_df_tab2[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
         else:
-            st.info("Veri setinde Türkiye (TR) veya Azerbaycan (AZ) için tanımlı harcama bilgisi bulunamadı veya harcamalar belirtilen eşiklerin altında (BV5).")
+            st.info(f"Veri setinde Türkiye (TR) veya Azerbaycan (AZ) için tanımlı harcama bilgisi bulunamadı ({tab2_title}).")
 
-        # 3. BV5 Global Averages (excluding TR and AZ)
-        st.markdown("#### Global Ortalamalar (Türkiye ve Azerbaycan Hariç) (BV5)")
-        bv5_df_global_avg_source = df_bv5_processed[~df_bv5_processed['Country'].isin(['TR', 'AZ'])]
-        
-        if not bv5_df_global_avg_source.empty:
-            bv5_global_total_spent = bv5_df_global_avg_source['Amount spent (USD)'].sum()
-            bv5_global_total_impressions = bv5_df_global_avg_source['Impressions'].sum()
-            bv5_global_total_link_clicks = bv5_df_global_avg_source['Link clicks'].sum()
-            bv5_global_total_reach = bv5_df_global_avg_source['Reach'].sum()
-            bv5_global_total_results = bv5_df_global_avg_source['Results'].sum()
-
-            bv5_global_avg_ctr = (bv5_global_total_link_clicks / bv5_global_total_impressions) * 100 if bv5_global_total_impressions > 0 else 0
-            bv5_global_avg_cpc = bv5_global_total_spent / bv5_global_total_link_clicks if bv5_global_total_link_clicks > 0 else 0
-            bv5_global_avg_cpm = (bv5_global_total_spent / bv5_global_total_impressions) * 1000 if bv5_global_total_impressions > 0 else 0
-            bv5_global_avg_cost_per_result = (bv5_global_total_spent / bv5_global_total_results) if bv5_global_total_results > 0 else 0
-
-            bv5_global_avg_data = {
-                'Metrik': ['Global Ortalama (TR ve AZ Hariç) - BV5'],
-                'Toplam Harcama (USD)': [bv5_global_total_spent],
-                'Toplam Reach': [bv5_global_total_reach],
-                'Toplam Gösterim (Impressions)': [bv5_global_total_impressions],
-                'Toplam Link Tıklaması': [bv5_global_total_link_clicks],
-                'Toplam Sonuç (Results)': [bv5_global_total_results],
-                'Ortalama CTR (%)': [bv5_global_avg_ctr],
-                'Ortalama CPC (USD)': [bv5_global_avg_cpc],
-                'Ortalama CPM (USD)': [bv5_global_avg_cpm],
-                'Ortalama Sonuç Başına Maliyet (USD)': [bv5_global_avg_cost_per_result]
+        st.markdown("#### Global Ortalamalar (Türkiye ve Azerbaycan Hariç)")
+        df_global_avg_source_tab2 = df_bv5_processed[~df_bv5_processed['Country'].isin(['TR', 'AZ'])]
+        if not df_global_avg_source_tab2.empty:
+            global_total_spent = df_global_avg_source_tab2['Amount spent (USD)'].sum()
+            global_total_impressions = df_global_avg_source_tab2['Impressions'].sum()
+            global_total_link_clicks = df_global_avg_source_tab2['Link clicks'].sum()
+            global_total_reach = df_global_avg_source_tab2['Reach'].sum()
+            global_total_results = df_global_avg_source_tab2['Results'].sum()
+            global_avg_ctr = (global_total_link_clicks / global_total_impressions) * 100 if global_total_impressions > 0 else 0
+            global_avg_cpc = global_total_spent / global_total_link_clicks if global_total_link_clicks > 0 else 0
+            global_avg_cpm = (global_total_spent / global_total_impressions) * 1000 if global_total_impressions > 0 else 0
+            global_avg_cost_per_result = (global_total_spent / global_total_results) if global_total_results > 0 else 0
+            global_avg_data = {
+                'Metrik': [f'Global Ortalama (TR ve AZ Hariç) - {tab2_title}'], 'Toplam Harcama (USD)': [global_total_spent],
+                'Toplam Reach': [global_total_reach], 'Toplam Gösterim (Impressions)': [global_total_impressions],
+                'Toplam Link Tıklaması': [global_total_link_clicks], 'Toplam Sonuç (Results)': [global_total_results],
+                'Ortalama CTR (%)': [global_avg_ctr], 'Ortalama CPC (USD)': [global_avg_cpc],
+                'Ortalama CPM (USD)': [global_avg_cpm], 'Ortalama Sonuç Başına Maliyet (USD)': [global_avg_cost_per_result]
             }
-            bv5_global_avg_display_df = pd.DataFrame(bv5_global_avg_data)
-            # Reusing style_format_countries for the global average table, assuming columns match
-            st.dataframe(bv5_global_avg_display_df.style.format({
-                "Toplam Harcama (USD)": "${:,.2f}",
-                "Toplam Reach": "{:,.0f}",
-                "Toplam Gösterim (Impressions)": "{:,.0f}",
-                "Toplam Link Tıklaması": "{:,.0f}",
-                "Toplam Sonuç (Results)": "{:,.0f}",
-                "Ortalama CTR (%)": "{:.2f}%",
-                "Ortalama CPC (USD)": "${:,.2f}",
-                "Ortalama CPM (USD)": "${:,.2f}",
-                "Ortalama Sonuç Başına Maliyet (USD)": "${:,.2f}",
-            }), use_container_width=True)
+            global_avg_display_df_tab2 = pd.DataFrame(global_avg_data)
+            st.dataframe(global_avg_display_df_tab2.style.format(column_formatters()), use_container_width=True)
         else:
-            st.info("TR ve AZ dışındaki ülkeler için global ortalama hesaplanacak veri bulunamadı (BV5)." )
+            st.info(f"TR ve AZ dışındaki ülkeler için global ortalama hesaplanacak veri bulunamadı ({tab2_title}).")
 
-        # --- BV5 Ad Set Analysis Section (mirroring BV2) ---
-        st.divider()
-        st.header("Reklam Seti Bazlı KPI Analizleri (BV5 - Temizlenmiş Veri)")
-
-        if 'Ad Set Name' in df_bv5_processed.columns:
-            # Using the new global display_ad_set_analysis function for BV5
-            display_ad_set_analysis(df_bv5_processed, analyze_ad_sets_bv5, "BV5 (10-22 Mayıs)", top_n_ad_sets=top_n_ad_sets)
-        else:
-            st.warning(f"`Ad Set Name` sütunu BV5 veri setinde (`{cleaned_bv5_file}`) bulunamadığı için reklam seti bazlı analizler yapılamıyor.")
-
+        top_n_ad_sets = 10 
+        df_bv5_for_ad_set_display = df_bv5_processed.copy()
+        # clean_bv5_global.csv is expected to have 'Ad Set Name' directly
+        display_ad_set_analysis(df_bv5_for_ad_set_display, analyze_ad_sets_bv5, tab2_title, top_n_ad_sets=top_n_ad_sets)
     else:
-        st.error(f"`{cleaned_bv5_file}` dosyası yüklenemediği için BV5 analizleri gösterilemiyor. Lütfen dosyanın `data` klasöründe olduğundan ve doğru formatta olduğundan emin olun.")
-    # The old descriptive markdown for tab2 has been replaced by the actual analysis.
-    # Remove or comment out the old markdown if it was extensive and is no longer needed.
-    # The initial part of the old markdown is kept ("Bu sekme, ... ayrılmıştır.")
+        st.error(f"`{cleaned_bv5_file}` dosyası yüklenemediği için {tab2_title} analizleri gösterilemiyor.")
 
-with tab3: # New tab for BV5 May 23-29
+with tab3: # BV5 (23-29 Mayıs)
     st.header(tab3_title)
-    if df_bv5_may23_cleaned is not None and not df_bv5_may23_cleaned.empty:
-        st.markdown(f"**Orjinal Dosya:** `{original_bv5_may23_file_name}`")
-        st.markdown(f"**Temizlenmiş Dosya:** `{cleaned_bv5_may23_file}`")
-        
-        original_rows_bv5_may23 = get_original_row_count(original_bv5_may23_file_name) # Pass only filename
-        cleaned_rows_bv5_may23 = len(df_bv5_may23_cleaned)
-        display_cleaning_info(original_rows_bv5_may23, cleaned_rows_bv5_may23, "BV5 (23-29 Mayıs)")
-
-        st.subheader("Ülke Bazlı KPI'lar (BV5 23-29 Mayıs)")
-        # Calculate KPIs for display for the new BV5 dataset
+    if df_bv5_may23_cleaned is not None:
+        original_rows = get_original_row_count(original_bv5_may23_file_name)
+        display_cleaning_info(original_rows, len(df_bv5_may23_cleaned), original_bv5_may23_file_name)
+        st.subheader(f"Detaylı KPI Analizleri ({tab3_title})")
         df_bv5_may23_processed = calculate_kpis_for_display(df_bv5_may23_cleaned.copy())
-        kpis_to_show_bv5_may23 = prepare_country_kpis(df_bv5_may23_processed, dataset_name="BV5 (23-29 Mayıs)") # Pass processed df
-        
-        # Define cols_to_display_countries for this tab or ensure it's globally available and suitable
-        cols_to_display_countries_tab3 = ['Country', 'Total Spent (USD)', 'Total Reach', 'Total Link Clicks', 'Total Results', 'CTR (%)', 'CPC (USD)', 'CPM (USD)', 'Avg. Cost per Result (USD)']
-        if not kpis_to_show_bv5_may23.empty:
-            st.dataframe(kpis_to_show_bv5_may23[cols_to_display_countries_tab3].style.format(column_formatters()), use_container_width=True)
+        country_summary_kpis_tab3 = prepare_country_kpis(df_bv5_may23_processed, dataset_name=tab3_title)
+
+        st.markdown(f"#### Harcaması {spending_threshold} USD Üzerinde Olan Ülkeler ve KPI'ları")
+        top_countries_df_tab3 = country_summary_kpis_tab3[country_summary_kpis_tab3['Total Spent (USD)'] > spending_threshold]
+        if not top_countries_df_tab3.empty:
+            st.dataframe(top_countries_df_tab3[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
         else:
-            st.info("BV5 (23-29 Mayıs) için ülke bazlı KPI verisi bulunamadı.")
+            st.info(f"Belirtilen harcama ({spending_threshold} USD) üzerinde ülke bulunamadı ({tab3_title}).")
+
+        st.markdown("#### Türkiye (TR) ve Azerbaycan (AZ) için Özel KPI Değerleri")
+        tr_az_countries_df_tab3 = country_summary_kpis_tab3[country_summary_kpis_tab3['Country'].isin(['Turkey', 'Azerbayjan'])]
+        if not tr_az_countries_df_tab3.empty:
+            st.dataframe(tr_az_countries_df_tab3[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
+        else:
+            st.info(f"Veri setinde Türkiye (TR) veya Azerbaycan (AZ) için tanımlı harcama bilgisi bulunamadı ({tab3_title}).")
+
+        st.markdown("#### Global Ortalamalar (Türkiye ve Azerbaycan Hariç)")
+        df_global_avg_source_tab3 = df_bv5_may23_processed[~df_bv5_may23_processed['Country'].isin(['TR', 'AZ'])]
+        if not df_global_avg_source_tab3.empty:
+            global_total_spent = df_global_avg_source_tab3['Amount spent (USD)'].sum()
+            global_total_impressions = df_global_avg_source_tab3['Impressions'].sum()
+            global_total_link_clicks = df_global_avg_source_tab3['Link clicks'].sum()
+            global_total_reach = df_global_avg_source_tab3['Reach'].sum()
+            global_total_results = df_global_avg_source_tab3['Results'].sum()
+            global_avg_ctr = (global_total_link_clicks / global_total_impressions) * 100 if global_total_impressions > 0 else 0
+            global_avg_cpc = global_total_spent / global_total_link_clicks if global_total_link_clicks > 0 else 0
+            global_avg_cpm = (global_total_spent / global_total_impressions) * 1000 if global_total_impressions > 0 else 0
+            global_avg_cost_per_result = (global_total_spent / global_total_results) if global_total_results > 0 else 0
+            global_avg_data = {
+                'Metrik': [f'Global Ortalama (TR ve AZ Hariç) - {tab3_title}'], 'Toplam Harcama (USD)': [global_total_spent],
+                'Toplam Reach': [global_total_reach], 'Toplam Gösterim (Impressions)': [global_total_impressions],
+                'Toplam Link Tıklaması': [global_total_link_clicks], 'Toplam Sonuç (Results)': [global_total_results],
+                'Ortalama CTR (%)': [global_avg_ctr], 'Ortalama CPC (USD)': [global_avg_cpc],
+                'Ortalama CPM (USD)': [global_avg_cpm], 'Ortalama Sonuç Başına Maliyet (USD)': [global_avg_cost_per_result]
+            }
+            global_avg_display_df_tab3 = pd.DataFrame(global_avg_data)
+            st.dataframe(global_avg_display_df_tab3.style.format(column_formatters()), use_container_width=True)
+        else:
+            st.info(f"TR ve AZ dışındaki ülkeler için global ortalama hesaplanacak veri bulunamadı ({tab3_title}).")
         
-        # Prepare dataframe for display_ad_set_analysis by ensuring 'Ad Set Name' column exists
         df_bv5_may23_for_ad_set_display = df_bv5_may23_processed.copy()
         if 'Campaign name' in df_bv5_may23_for_ad_set_display.columns:
             df_bv5_may23_for_ad_set_display.rename(columns={'Campaign name': 'Ad Set Name'}, inplace=True)
-        else:
-            # If 'Campaign name' is also missing, display_ad_set_analysis will show its own warning
-            # but we ensure 'Ad Set Name' is at least attempted or explicitly missing.
-            if 'Ad Set Name' not in df_bv5_may23_for_ad_set_display.columns:
-                 df_bv5_may23_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set" # Placeholder
-
-        # Use the global ad set display function
-        display_ad_set_analysis(df_bv5_may23_for_ad_set_display, analyze_ad_sets_bv5_may23_specific, "BV5 (23-29 Mayıs)") # Use aliased function
+        elif 'Ad Set Name' not in df_bv5_may23_for_ad_set_display.columns: 
+             df_bv5_may23_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set"
+        display_ad_set_analysis(df_bv5_may23_for_ad_set_display, analyze_ad_sets_bv5_may23_specific, tab3_title)
     else:
-        st.error(f"Temizlenmiş BV5 (23-29 Mayıs) verisi ({cleaned_bv5_may23_file}) yüklenemedi veya boş.")
+        st.error(f"`{cleaned_bv5_may23_file}` dosyası yüklenemediği için {tab3_title} analizleri gösterilemiyor.")
 
-with tab4: # New tab for TT BV2 May 23-29
+with tab4: # TT BV2 (23-29 Mayıs)
     st.header(tab4_title)
-    if df_tt_bv2_may23_cleaned is not None and not df_tt_bv2_may23_cleaned.empty:
-        st.markdown(f"**Orjinal Dosya:** `{original_tt_bv2_may23_file_name}`")
-        st.markdown(f"**Temizlenmiş Dosya:** `{cleaned_tt_bv2_may23_file}`")
-        
-        original_rows_tt_bv2_may23 = get_original_row_count(original_tt_bv2_may23_file_name) # Pass only filename
-        cleaned_rows_tt_bv2_may23 = len(df_tt_bv2_may23_cleaned)
-        display_cleaning_info(original_rows_tt_bv2_may23, cleaned_rows_tt_bv2_may23, "TT BV2 (23-29 Mayıs)")
-
-        st.subheader("Ülke Bazlı KPI'lar (TT BV2 23-29 Mayıs)")
-        # Calculate KPIs for display for the new TT BV2 dataset
+    if df_tt_bv2_may23_cleaned is not None:
+        original_rows = get_original_row_count(original_tt_bv2_may23_file_name)
+        display_cleaning_info(original_rows, len(df_tt_bv2_may23_cleaned), original_tt_bv2_may23_file_name)
+        st.subheader(f"Detaylı KPI Analizleri ({tab4_title})")
         df_tt_bv2_may23_processed = calculate_kpis_for_display(df_tt_bv2_may23_cleaned.copy())
-        kpis_to_show_tt_bv2_may23 = prepare_country_kpis(df_tt_bv2_may23_processed, dataset_name="TT BV2 (23-29 Mayıs)") # Pass processed df
-        
-        # Define cols_to_display_countries for this tab
-        cols_to_display_countries_tab4 = ['Country', 'Total Spent (USD)', 'Total Reach', 'Total Link Clicks', 'Total Results', 'CTR (%)', 'CPC (USD)', 'CPM (USD)', 'Avg. Cost per Result (USD)']
-        if not kpis_to_show_tt_bv2_may23.empty:
-            st.dataframe(kpis_to_show_tt_bv2_may23[cols_to_display_countries_tab4].style.format(column_formatters()), use_container_width=True)
-        else:
-            st.info("TT BV2 (23-29 Mayıs) için ülke bazlı KPI verisi bulunamadı.")
+        country_summary_kpis_tab4 = prepare_country_kpis(df_tt_bv2_may23_processed, dataset_name=tab4_title)
 
-        # Prepare dataframe for display_ad_set_analysis by ensuring 'Ad Set Name' column exists
+        st.markdown(f"#### Harcaması {spending_threshold} USD Üzerinde Olan Ülkeler ve KPI'ları")
+        top_countries_df_tab4 = country_summary_kpis_tab4[country_summary_kpis_tab4['Total Spent (USD)'] > spending_threshold]
+        if not top_countries_df_tab4.empty:
+            st.dataframe(top_countries_df_tab4[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
+        else:
+            st.info(f"Belirtilen harcama ({spending_threshold} USD) üzerinde ülke bulunamadı ({tab4_title}).")
+
+        st.markdown("#### Türkiye (TR) ve Azerbaycan (AZ) için Özel KPI Değerleri")
+        tr_az_countries_df_tab4 = country_summary_kpis_tab4[country_summary_kpis_tab4['Country'].isin(['Turkey', 'Azerbaijan'])]
+        if not tr_az_countries_df_tab4.empty:
+            st.dataframe(tr_az_countries_df_tab4[cols_to_display_countries].style.format(style_format_countries), use_container_width=True)
+        else:
+            st.info(f"Veri setinde Türkiye (TR) veya Azerbaycan (AZ) için tanımlı harcama bilgisi bulunamadı ({tab4_title}).")
+
+        st.markdown("#### Global Ortalamalar (Türkiye ve Azerbaycan Hariç)")
+        df_global_avg_source_tab4 = df_tt_bv2_may23_processed[~df_tt_bv2_may23_processed['Country'].isin(['TR', 'AZ'])]
+        if not df_global_avg_source_tab4.empty:
+            global_total_spent = df_global_avg_source_tab4['Amount spent (USD)'].sum()
+            global_total_impressions = df_global_avg_source_tab4['Impressions'].sum()
+            global_total_link_clicks = df_global_avg_source_tab4['Link clicks'].sum()
+            global_total_reach = df_global_avg_source_tab4['Reach'].sum()
+            global_total_results = df_global_avg_source_tab4['Results'].sum()
+            global_avg_ctr = (global_total_link_clicks / global_total_impressions) * 100 if global_total_impressions > 0 else 0
+            global_avg_cpc = global_total_spent / global_total_link_clicks if global_total_link_clicks > 0 else 0
+            global_avg_cpm = (global_total_spent / global_total_impressions) * 1000 if global_total_impressions > 0 else 0
+            global_avg_cost_per_result = (global_total_spent / global_total_results) if global_total_results > 0 else 0
+            global_avg_data = {
+                'Metrik': [f'Global Ortalama (TR ve AZ Hariç) - {tab4_title}'], 'Toplam Harcama (USD)': [global_total_spent],
+                'Toplam Reach': [global_total_reach], 'Toplam Gösterim (Impressions)': [global_total_impressions],
+                'Toplam Link Tıklaması': [global_total_link_clicks], 'Toplam Sonuç (Results)': [global_total_results],
+                'Ortalama CTR (%)': [global_avg_ctr], 'Ortalama CPC (USD)': [global_avg_cpc],
+                'Ortalama CPM (USD)': [global_avg_cpm], 'Ortalama Sonuç Başına Maliyet (USD)': [global_avg_cost_per_result]
+            }
+            global_avg_display_df_tab4 = pd.DataFrame(global_avg_data)
+            st.dataframe(global_avg_display_df_tab4.style.format(column_formatters()), use_container_width=True)
+        else:
+            st.info(f"TR ve AZ dışındaki ülkeler için global ortalama hesaplanacak veri bulunamadı ({tab4_title}).")
+
         df_tt_bv2_for_ad_set_display = df_tt_bv2_may23_processed.copy()
         if 'Campaign name' in df_tt_bv2_for_ad_set_display.columns:
             df_tt_bv2_for_ad_set_display.rename(columns={'Campaign name': 'Ad Set Name'}, inplace=True)
-        else:
-            # If 'Campaign name' is also missing, display_ad_set_analysis will show its own warning
-            # but we ensure 'Ad Set Name' is at least attempted or explicitly missing.
-            if 'Ad Set Name' not in df_tt_bv2_for_ad_set_display.columns:
-                 df_tt_bv2_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set" # Placeholder if no campaign/ad set name found
-
-        # Use the global ad set display function
-        display_ad_set_analysis(df_tt_bv2_for_ad_set_display, analyze_ad_sets_tt_bv2_may23_specific, "TT BV2 (23-29 Mayıs)") # Use aliased function
+        elif 'Ad Set Name' not in df_tt_bv2_for_ad_set_display.columns:
+             df_tt_bv2_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set"
+        display_ad_set_analysis(df_tt_bv2_for_ad_set_display, analyze_ad_sets_tt_bv2_may23_specific, tab4_title)
     else:
-        st.error(f"Temizlenmiş TT BV2 (23-29 Mayıs) verisi ({cleaned_tt_bv2_may23_file}) yüklenemedi veya boş.")
+        st.error(f"`{cleaned_tt_bv2_may23_file}` dosyası yüklenemediği için {tab4_title} analizleri gösterilemiyor.")
 
 st.sidebar.header("Ayarlar")
