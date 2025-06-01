@@ -168,7 +168,7 @@ def display_ad_set_analysis(df_processed, analyze_function, dataset_label_short,
 
     st.markdown(f"#### {az_name} Reklam Seti Performansı")
     az_results_df, az_spent_df = analyze_function(df_processed, target_countries=['AZ'], filter_type='include', top_n=top_n_ad_sets)
-    _display_single_ad_set_analysis(az_results_df, az_spent_df, az_name)
+    _display_single_ad_set_table_set(az_results_df, az_spent_df, az_name)
     
     global_label_suffix = f"Global ({tr_name} ve {az_name} Hariç)"
     st.markdown(f"#### {global_label_suffix} Reklam Seti Performansı")
