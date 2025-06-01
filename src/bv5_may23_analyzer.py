@@ -41,6 +41,20 @@ def analyze_ad_sets_bv5_may23(input_df, target_countries, filter_type, top_n=10)
         print(f"Error from bv5_may23_analyzer.analyze_ad_sets_bv5_may23: Invalid filter_type '{filter_type}'.")
         return pd.DataFrame(), pd.DataFrame()
 
+    # --- Temporary Debugging ---
+    print(f"--- Debug bv5_may23_analyzer (Dataset: BV5 23-29 May): filter_type='{filter_type}', target_countries={target_countries} ---")
+    if not df_filtered.empty:
+        print(f"Shape of df_filtered: {df_filtered.shape}")
+        print(f"Countries in df_filtered: {df_filtered['Country'].unique()}")
+        print(f"Campaign names in df_filtered (first 5): {df_filtered['Campaign name'].unique()[:5]}")
+        # Print sum of key metrics to see if they are all zero
+        print(f"Sum of 'Amount spent (USD)' in df_filtered: {df_filtered['Amount spent (USD)'].sum()}")
+        print(f"Sum of 'Results' in df_filtered: {df_filtered['Results'].sum()}")
+        print(f"Sample of df_filtered (head 3):\n{df_filtered.head(3)}")
+    else:
+        print("df_filtered is empty after country selection for BV5 23-29 May.")
+    # --- End Temporary Debugging ---
+
     if df_filtered.empty:
         return pd.DataFrame(), pd.DataFrame()
 

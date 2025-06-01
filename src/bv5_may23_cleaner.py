@@ -10,6 +10,8 @@ try:
     # Read the CSV file
     df = pd.read_csv(input_file_path)
     print(f"Original BV5 May 23-29 data ({input_file_path}) loaded successfully. Rows: {len(df)}")
+    # print("Columns in the original BV5 May 23-29 CSV:") # Removed diagnostic print
+    # print(list(df.columns)) # Removed diagnostic print
 
     # Store the original number of rows for comparison
     original_row_count = len(df)
