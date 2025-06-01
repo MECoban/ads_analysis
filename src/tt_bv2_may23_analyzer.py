@@ -20,15 +20,15 @@ def analyze_ad_sets_tt_bv2_may23(input_df, target_countries, filter_type, top_n=
     """
     Analyzes ad set performance for the TT BV2 May 23-29 dataset.
     Args:
-        input_df (pd.DataFrame): DataFrame with ad-level data including 'Country', 'Ad Set Name', etc.
+        input_df (pd.DataFrame): DataFrame with ad-level data including 'Country', 'Campaign name', etc.
         target_countries (list): Country codes for filtering.
         filter_type (str): 'include' or 'exclude'.
         top_n (int): Number of top ad sets.
     Returns:
         tuple: (top_by_results_df, top_by_spent_df)
     """
-    if 'Ad Set Name' not in input_df.columns:
-        print("Error from tt_bv2_may23_analyzer.analyze_ad_sets_tt_bv2_may23: 'Ad Set Name' column not found.")
+    if 'Campaign name' not in input_df.columns:
+        print("Error from tt_bv2_may23_analyzer.analyze_ad_sets_tt_bv2_may23: 'Campaign name' column not found.")
         return pd.DataFrame(), pd.DataFrame()
 
     df_analysis_ready = input_df.copy()
@@ -52,7 +52,7 @@ def analyze_ad_sets_tt_bv2_may23(input_df, target_countries, filter_type, top_n=
         else:
             df_filtered.loc[:, metric] = pd.to_numeric(df_filtered[metric], errors='coerce').fillna(0)
 
-    ad_set_summary = df_filtered.groupby('Ad Set Name').agg(
+    ad_set_summary = df_filtered.groupby('Campaign name').agg(
         agg_spent=('Amount spent (USD)', 'sum'),
         agg_impressions=('Impressions', 'sum'),
         agg_link_clicks=('Link clicks', 'sum'),

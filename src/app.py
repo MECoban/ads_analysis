@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os # Added import
 from global_analyzer import analyze_ad_sets # Removed calculate_kpis_for_analysis import as it's not directly used here
 from bv5_analyzer import analyze_ad_sets_bv5 # Added import for BV5
 from bv5_may23_analyzer import analyze_ad_sets_bv5_may23 # New import
@@ -25,16 +26,21 @@ country_code_to_name_map = {
 
 # --- Global Helper Functions ---
 
-def get_original_row_count(file_path):
-    r"""Reads a CSV file and returns the number of rows (excluding header)."""
+def get_original_row_count(file_name_in_data_dir):
+    r"""Reads a CSV file from the 'data' directory and returns the number of rows (excluding header)."""
     try:
-        df = pd.read_csv(file_path)
+        # Construct path relative to this script's directory, then go up and into 'data'
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir) # Go up one level from 'src' to project root
+        absolute_file_path = os.path.join(project_root, 'data', file_name_in_data_dir)
+        
+        df = pd.read_csv(absolute_file_path)
         return len(df)
     except FileNotFoundError:
-        st.error(f"Error in get_original_row_count: File not found at {file_path}")
+        st.error(f"Error in get_original_row_count: File not found at '{os.path.join('data', file_name_in_data_dir)}' (tried absolute path: {absolute_file_path})")
         return 0
     except Exception as e:
-        st.error(f"Error reading {file_path} in get_original_row_count: {e}")
+        st.error(f"Error reading '{os.path.join('data', file_name_in_data_dir)}' in get_original_row_count: {e}")
         return 0
 
 def display_cleaning_info(original_rows, cleaned_rows, dataset_name):
@@ -162,7 +168,7 @@ def display_ad_set_analysis(df_processed, analyze_function, dataset_label_short,
 
     st.markdown(f"#### {az_name} Reklam Seti Performansı")
     az_results_df, az_spent_df = analyze_function(df_processed, target_countries=['AZ'], filter_type='include', top_n=top_n_ad_sets)
-    _display_single_ad_set_table_set(az_results_df, az_spent_df, az_name)
+    _display_single_ad_set_analysis(az_results_df, az_spent_df, az_name)
     
     global_label_suffix = f"Global ({tr_name} ve {az_name} Hariç)"
     st.markdown(f"#### {global_label_suffix} Reklam Seti Performansı")
@@ -511,7 +517,7 @@ with tab3: # New tab for BV5 May 23-29
         st.markdown(f"**Orjinal Dosya:** `{original_bv5_may23_file_name}`")
         st.markdown(f"**Temizlenmiş Dosya:** `{cleaned_bv5_may23_file}`")
         
-        original_rows_bv5_may23 = get_original_row_count(f"data/{original_bv5_may23_file_name}")
+        original_rows_bv5_may23 = get_original_row_count(original_bv5_may23_file_name) # Pass only filename
         cleaned_rows_bv5_may23 = len(df_bv5_may23_cleaned)
         display_cleaning_info(original_rows_bv5_may23, cleaned_rows_bv5_may23, "BV5 (23-29 Mayıs)")
 
@@ -538,7 +544,7 @@ with tab4: # New tab for TT BV2 May 23-29
         st.markdown(f"**Orjinal Dosya:** `{original_tt_bv2_may23_file_name}`")
         st.markdown(f"**Temizlenmiş Dosya:** `{cleaned_tt_bv2_may23_file}`")
         
-        original_rows_tt_bv2_may23 = get_original_row_count(f"data/{original_tt_bv2_may23_file_name}")
+        original_rows_tt_bv2_may23 = get_original_row_count(original_tt_bv2_may23_file_name) # Pass only filename
         cleaned_rows_tt_bv2_may23 = len(df_tt_bv2_may23_cleaned)
         display_cleaning_info(original_rows_tt_bv2_may23, cleaned_rows_tt_bv2_may23, "TT BV2 (23-29 Mayıs)")
 
@@ -554,8 +560,18 @@ with tab4: # New tab for TT BV2 May 23-29
         else:
             st.info("TT BV2 (23-29 Mayıs) için ülke bazlı KPI verisi bulunamadı.")
 
+        # Prepare dataframe for display_ad_set_analysis by ensuring 'Ad Set Name' column exists
+        df_tt_bv2_for_ad_set_display = df_tt_bv2_may23_processed.copy()
+        if 'Campaign name' in df_tt_bv2_for_ad_set_display.columns:
+            df_tt_bv2_for_ad_set_display.rename(columns={'Campaign name': 'Ad Set Name'}, inplace=True)
+        else:
+            # If 'Campaign name' is also missing, display_ad_set_analysis will show its own warning
+            # but we ensure 'Ad Set Name' is at least attempted or explicitly missing.
+            if 'Ad Set Name' not in df_tt_bv2_for_ad_set_display.columns:
+                 df_tt_bv2_for_ad_set_display['Ad Set Name'] = "Unknown Ad Set" # Placeholder if no campaign/ad set name found
+
         # Use the global ad set display function
-        display_ad_set_analysis(df_tt_bv2_may23_processed, analyze_ad_sets_tt_bv2_may23, "TT BV2 (23-29 Mayıs)")
+        display_ad_set_analysis(df_tt_bv2_for_ad_set_display, analyze_ad_sets_tt_bv2_may23, "TT BV2 (23-29 Mayıs)")
     else:
         st.error(f"Temizlenmiş TT BV2 (23-29 Mayıs) verisi ({cleaned_tt_bv2_may23_file}) yüklenemedi veya boş.")
 
